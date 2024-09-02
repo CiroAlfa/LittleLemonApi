@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MenuItemView, SingleMenuItemView, menu_items_limited
+from .views import MenuItemView, SingleMenuItemView
 
 urlpatterns = [
     path('menu-items/', MenuItemView.as_view(), name='menu-items'),
