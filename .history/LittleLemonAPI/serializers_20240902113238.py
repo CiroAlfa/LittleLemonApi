@@ -23,3 +23,20 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
     def calculate_tax(self, product: MenuItem):
         return product.price * Decimal(1.1)
+    
+    def validate_price(self, value):
+        if value < 2:
+            raise serializers.ValidationError('Price should not be less than 2.0')
+        return value
+
+    def validate_stock(self, value):
+        if value < 0:
+            raise serializers.ValidationError('Stock cannot be negative')
+        return value
+
+    def validate(self, attrs):
+        if attrs['price'] < 2:
+            raise serializers.ValidationError('Price should not be less than 2.0')
+        if attrs['inventory'] < 0:
+            raise serializers.ValidationError('Stock cannot be negative')
+        return super().validate(attrs)
