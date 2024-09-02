@@ -91,12 +91,16 @@ DATABASES = {
     }
 }
 
-# settings.py
-
+'''REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,  # Número de elementos por página
+}'''
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,  # Número de elementos por página por defecto
+    # Eliminar o ajustar PAGE_SIZE para que no sobrescriba `per_page`
+    # 'PAGE_SIZE': 10,
 }
+
 
 
 # Password validation

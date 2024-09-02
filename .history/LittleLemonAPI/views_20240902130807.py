@@ -8,8 +8,6 @@ from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from django.core.paginator import EmptyPage
 from rest_framework.exceptions import NotFound
-# views.py
-from .pagination import CustomPageNumberPagination
 
 from rest_framework.pagination import PageNumberPagination
 
@@ -53,45 +51,55 @@ class SingleMenuItemView(generics.RetrieveUpdateDestroyAPIView):
 
 
 
-  # Asegúrate de importar correctamente
-
-from rest_framework.pagination import PageNumberPagination
-
 class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10  # Valor por defecto
     page_size_query_param = 'per_page'
     max_page_size = 100  # Máximo permitido por página
 
-class MenuItemView(generics.ListCreateAPIView):
-    queryset = MenuItem.objects.all()
-    serializer_class = MenuItemSerializer
-    pagination_class = CustomPageNumberPagination  # Añadir esta línea
 
-    def get_queryset(self):
-        queryset = MenuItem.objects.select_related('category').all()
+@api_view(['GET', 'POST'])
+def menu_items(request):
+    if request.method == 'GET':
+        items = MenuItem.objects.select_related('category').all()
 
         # Filtrar por categoría
-        category_name = self.request.query_params.get('category')
+        category_name = request.query_params.get('category')
         if category_name:
-            queryset = queryset.filter(category__title__iexact=category_name)
+            items = items.filter(category__title__iexact=category_name)
 
         # Filtrar por precio máximo
-        max_price = self.request.query_params.get('to_price')
+        max_price = request.query_params.get('to_price')
         if max_price:
-            queryset = queryset.filter(price__lte=max_price)
+            items = items.filter(price__lte=max_price)
 
         # Filtrar por búsqueda en el nombre
-        search_term = self.request.query_params.get('search')
-        if search_term:
-            queryset = queryset.filter(title__icontains=search_term)
+        search = request.query_params.get('search')
+        if search:
+            items = items.filter(title__icontains=search)
 
         # Ordenar los resultados
-        ordering = self.request.query_params.get('ordering')
+        ordering = request.query_params.get('ordering')
         if ordering:
             ordering_fields = ordering.split(',')
-            queryset = queryset.order_by(*ordering_fields)
+            items = items.order_by(*ordering_fields)
 
-        return queryset
+        # Inicializar la paginación
+        paginator = PageNumberPagination()
+        paginator.page_size = request.query_params.get('per_page', 10)
+        
+        paginated_items = paginator.paginate_queryset(items, request)
 
+        # Serializar los elementos paginados
+        serialized_items = MenuItemSerializer(paginated_items, many=True)
+        
+        # Retornar la respuesta paginada
+        return paginator.get_paginated_response(serialized_items.data)
+
+    elif request.method == 'POST':
+        serialized_item = MenuItemSerializer(data=request.data)
+        serialized_item.is_valid(raise_exception=True)
+        serialized_item.save()
+        return Response(serialized_item.data, status=status.HTTP_201_CREATED)
 
     
 # En tu archivo views.py
@@ -113,14 +121,3 @@ def menu_items_limited(request):
     items = get_menu_items_with_limit(limit)
     # Devolvemos los elementos como una respuesta JSON
     return JsonResponse({"items": items})
-
-
-# views.py
-
-@api_view(['GET'])
-def test_pagination(request):
-    items = MenuItem.objects.all()
-    paginator = CustomPageNumberPagination()
-    paginated_items = paginator.paginate_queryset(items, request)
-    serializer = MenuItemSerializer(paginated_items, many=True)
-    return paginator.get_paginated_response(serializer.data)
